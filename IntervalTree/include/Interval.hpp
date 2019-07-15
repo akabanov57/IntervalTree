@@ -77,7 +77,7 @@ public:
 	}
 
 	inline bool containded(long point) const {
-		return point >= this->start() && point <= this->end();
+		return point >= this->start() && point < this->end();
 	}
 
 	inline bool isValid() const {
@@ -118,11 +118,11 @@ inline bool operator == (const Interval& i1, const Interval& i2) {
  * returns negation "do not overlap".
  */
 inline bool overlap(const Interval& i1, const Interval& i2) {
-	return !((i1.start() > i2.end()) || (i1.end() < i2.start()));
+	return !((i1.start() >= i2.end()) || (i1.end() <= i2.start()));
 }
 
 inline std::ostream& operator << (std::ostream& out, const Interval& i) {
-	out << "[" << i._offset << "," << i.end() << "]";
+	out << "[" << i._offset << "," << i.end() << ")";
 	return out;
 }
 
