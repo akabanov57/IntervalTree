@@ -8,9 +8,6 @@
 #ifndef INTERVAL_HPP_
 #define INTERVAL_HPP_
 
-/**
- * For demo only.
- */
 #include <iostream>
 #include <exception>
 #include <utility>
@@ -20,110 +17,169 @@ struct Interval;
 bool overlap(const Interval& i1, const Interval& i2);
 
 /**
+ * Half open interval.
  * see https://en.wikipedia.org/wiki/Interval_(mathematics)
  * see https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
- * can be renamed to "Extent", etc...
+ *
  */
 struct Interval {
 private:
-	long _offset;
-	long _length;
-	Interval(long offset, long length) {
-		_offset = offset;
-		_length = length;
-	}
+    long _start;
+    long _end;
+
+    Interval(long _start_, long _end_) {
+        _start = _start_;
+        _end = _end_;
+    }
+
 public:
-	Interval() {
-		_offset = 0L;
-		_length = 0L;
-	}
 
-	static Interval valueOf(long _offset_, long _length_) {
-		using std::invalid_argument;
-		if (_offset_ < 0) {
-			throw invalid_argument("_offset_ < 0");
-		}
-		if (_length_ < 0) {
-			throw invalid_argument("_length_ < 0");
-		}
-		return Interval(_offset_, _length_);
-	}
+    Interval() {
+        _start = 0L;
+        _end = 0L;
+    }
 
-	inline long start() const {
-		return _offset;
-	}
+    static Interval valueOf(long _start_, long _end_) {
+        using std::invalid_argument;
+        if (_start_ < 0) {
+            throw invalid_argument("_start_ < 0");
+        }
+        if (_end_ < 0) {
+            throw invalid_argument("_end_ < 0");
+        }
+        if (_start_ > _end_) {
+            throw invalid_argument("_start_ > _end_");
+        }
+        return Interval(_start_, _end_);
+    }
 
-	inline Interval& start(long _start_) {
-		_length -= _start_ - _offset;
-		_offset = _start_;
-		return *this;
-	}
+    long start() const {
+        return _start;
+    }
 
-	inline long end() const {
-		return _offset + _length;
-	}
+    long end() const {
+        return _end;
+    }
 
-	inline Interval& end(long _end_) {
-		_length = _end_ - _offset;
-		return *this;
-	}
+    long length() const {
+        return _end - _start;
+    }
 
-	inline long offset() const {
-		return _offset;
-	}
+    bool contained(long point) const {
+        return point >= this->start() && point < this->end();
+    }
 
-	inline long length() const {
-		return _length;
-	}
+    bool isValid() const {
+        return length() > 0;
+    }
 
-	inline bool containded(long point) const {
-		return point >= this->start() && point < this->end();
-	}
-
-	inline bool isValid() const {
-		return this->_length > 0;
-	}
-
-	friend bool operator < (const Interval& i1, const Interval& i2);
-	friend bool operator > (const Interval& i1, const Interval& i2);
-	friend bool operator == (const Interval& i1, const Interval& i2);
-
-	friend bool youngerThen(const Interval& i1, const Interval& i2);
-
-	friend std::ostream& operator << (std::ostream& out, const Interval& i);
 };
 
 /**
- * The offset i1 "is to the left" than the offset i2.
+ * The start i1 "is to the left" than the start i2.
  */
-inline bool operator < (const Interval& i1, const Interval& i2) {
-	return i1._offset < i2._offset;
+inline bool operator <(const Interval &i1, const Interval &i2) {
+    return i1.start() < i2.start();
 }
 
 /**
- * The offset i1 "is more to the right" than the offset i2.
+ * The start i1 "is more to the right" than the start i2.
  */
-inline bool operator > (const Interval& i1, const Interval& i2) {
-	return i1._offset > i2._offset;
+inline bool operator >(const Interval &i1, const Interval &i2) {
+    return i1.start() > i2.start();
+}
+
+inline bool operator ==(const Interval &i1, const Interval &i2) {
+    return i1.start() == i2.start();
+}
+
+inline bool operator !=(const Interval &i1, const Interval &i2) {
+    return i1.start() != i2.start();
 }
 
 /**
- * The offsets i1 and i2 are equal.
- */
-inline bool operator == (const Interval& i1, const Interval& i2) {
-	return i1._offset == i2._offset;
-}
-
-/**
+ *             i1
+ *         |--------|
+ *    i2
+ * |------|
+ *
+ *      i1
+ * |---------|
+ *               i2
+ *            |------|
  * returns negation "do not overlap".
  */
-inline bool overlap(const Interval& i1, const Interval& i2) {
-	return !((i1.start() >= i2.end()) || (i1.end() <= i2.start()));
+inline bool overlap(const Interval &i1, const Interval &i2) {
+    return !(i1.start() >= i2.end() || i1.end() <= i2.start());
 }
 
-inline std::ostream& operator << (std::ostream& out, const Interval& i) {
-	out << "[" << i._offset << "," << i.end() << ")";
-	return out;
+/**
+ * adapted from https://github.com/childsish/interval
+ *       i1
+ *  |----------|
+ * start      end
+ *            i2
+ *        |---------|
+ *      start      end
+ *
+ *             i1
+ *        |---------|
+ *      start      end
+ *       i2
+ *  |----------|
+ * start      end
+ *
+ *            i1
+ *  |----------------------|
+ * start                  end
+ *              i2
+ *        |-----------|
+ *      start        end
+ */
+inline std::pair<Interval, Interval> set_difference(const Interval& i1, const Interval& i2) {
+    if (!overlap(i1, i2)) {
+        return std::pair<Interval, Interval>();
+    }
+    Interval left;
+    Interval right;
+    if (i1.start() < i2.start()) {
+        left = Interval::valueOf(i1.start(), i2.start());
+    }
+    if (i1.end() > i2.end()) {
+        right = Interval::valueOf(i2.end(), i1.end());
+    }
+    return std::pair<Interval, Interval>{left, right};
+}
+
+/**
+ * See comments to set_difference.
+ */
+inline Interval set_intersect(const Interval& i1, const Interval& i2) {
+    using std::max;
+    using std::min;
+
+    if (!overlap(i1, i2)) {
+        return Interval();
+    }
+    return Interval::valueOf(max(i1.start(),i2.start()), min(i1.end(), i2.end()));
+}
+
+/**
+ * See comments to set_difference.
+ */
+inline Interval set_union(const Interval& i1, const Interval& i2) {
+    using std::max;
+    using std::min;
+
+    if (!overlap(i1, i2)) {
+        return Interval();
+    }
+    return Interval::valueOf(min(i1.start(), i2.start()), max(i1.end(), i2.end()));
+}
+
+inline std::ostream& operator <<(std::ostream &out, const Interval &i) {
+    out << "[" << i.start() << "," << i.end() << "[";
+    return out;
 }
 
 #endif /* INTERVAL_HPP_ */

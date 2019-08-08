@@ -8,10 +8,12 @@
 #ifndef INTERVALTREE_HPP_
 #define INTERVALTREE_HPP_
 
-#include <Interval.hpp>
 #include <iostream>
 #include <algorithm>
 #include <set>
+#include <cassert>
+
+#include <Interval.hpp>
 
 /**
  * In computer science, an interval tree is a tree data structure to hold intervals.
@@ -30,423 +32,365 @@
  * Clifford Stein
  *
  */
+
 class IntervalTree {
 private:
 
-	enum Color {
-		BLACK, RED
-	};
+    enum Color {
+        BLACK, RED
+    };
 
-	/**
-	 * interface that represents a node in the tree
-	 */
-	class RBNode {
-	public:
-		virtual Color color() const = 0;
-		virtual RBNode& color(Color color_) = 0;
-		virtual RBNode* parent() const = 0;
-		virtual RBNode& parent(RBNode* parent_) = 0;
-		virtual RBNode* left() const = 0;
-		virtual RBNode& left(RBNode* left_) = 0;
-		virtual RBNode* right() const = 0;
-		virtual RBNode& right(RBNode *right_) = 0;
-		virtual const Interval& key() const = 0;
-		virtual RBNode& key(const Interval& key_) = 0;
-		virtual long max() const = 0;
-		virtual RBNode& max(long _max_) = 0;
-		virtual long min() const = 0;
-		virtual RBNode& min(long _min_) = 0;
-		virtual ~RBNode() {
-		}
-	};
+    /**
+     * type that represents a node in the tree
+     */
+    class OrdinaryNode {
+    private:
+        Color color_;
+        OrdinaryNode *parent_;
+        OrdinaryNode *left_;
+        OrdinaryNode *right_;
+        Interval key_;
+        /**
+         * Node is augmented with maximal right endpoint in subtree rooted in x.
+         */
+        long max_;
+        /**
+         * Node is augmented with minimal left endpoint in subtree rooted in x.
+         */
+        long min_;
 
-	class OrdinaryNode: public RBNode {
-	private:
-		Color color_;
-		RBNode *parent_;
-		RBNode *left_;
-		RBNode *right_;
-		Interval key_;
-		/**
-		 * Node is augmented with maximal right endpoint in subtree rooted in x.
-		 */
-		long max_;
-		/**
-		 * Node is augmented with minimal left endpoint in subtree rooted in x.
-		 */
-		long min_;
-	public:
-		/**
-		 * new OrdinaryNode must be RED.
-		 */
-		OrdinaryNode(const Interval& key_) {
-			color_ = RED;
-			parent_ = nullptr;
-			left_ = TNIL;
-			right_ = TNIL;
-			this->key_ = key_;
-			max_ = this->key_.end();
-			min_ = this->key_.start();
-		}
-		Color color() const {
-			return color_;
-		}
-		RBNode& color(Color color_) {
-			this->color_ = color_;
-			return *this;
-		}
-		RBNode* parent() const {
-			return parent_;
-		}
-		RBNode& parent(RBNode* parent_) {
-			this->parent_ = parent_;
-			return *this;
-		}
-		RBNode* left() const {
-			return left_;
-		}
-		RBNode& left(RBNode* left_) {
-			this->left_ = left_;
-			return *this;
-		}
-		RBNode* right() const {
-			return right_;
-		}
-		RBNode& right(RBNode *right_) {
-			this->right_ = right_;
-			return *this;
-		}
-		const Interval& key() const {
-			return key_;
-		}
-		RBNode& key(const Interval& key_) {
-			this->key_ = key_;
-			return *this;
-		}
-		long max() const {
-			return max_;
-		}
-		RBNode& max(long _max_) {
-			max_ = _max_;
-			return *this;
-		}
-		long min() const {
-			return min_;
-		}
-		RBNode& min(long _min_) {
-			min_ = _min_;
-			return *this;
-		}
-		~OrdinaryNode() {
-			if (left_ != TNIL) {
-				delete left_;
-			}
-			if (right_ != TNIL) {
-				delete right_;
-			}
-		}
+        OrdinaryNode() {
+            color_ = BLACK;
+            parent_ = nullptr;
+            left_ = this;
+            right_ = this;
+            max_ = 0L;
+            min_ = 0L;
+        }
+    public:
+        /**
+         * new OrdinaryNode must be RED.
+         */
+        OrdinaryNode(const Interval& key_, OrdinaryNode* parent) {
+            color_ = RED;
+            this->parent_ = parent;
+            left_ = TNIL;
+            right_ = TNIL;
+            this->key_ = key_;
+            max_ = this->key_.end();
+            min_ = this->key_.start();
+        }
 
-	};
+        OrdinaryNode(const Interval& key_): OrdinaryNode(key_, nullptr) {}
 
-	class LeafNode: public RBNode {
-	private:
-		/*
-		 * we need parent when fixDelete.
-		 */
-		RBNode *parent_;
-		Interval key_;
-	public:
-		LeafNode() {
-			parent_ = nullptr;
-		}
-		Color color() const {
-			return BLACK;
-		}
-		RBNode& color(Color _color_) {
-			return *this;
-		}
-		RBNode* parent() const {
-			return parent_;
-		}
-		RBNode& parent(RBNode *_parent_) {
-			parent_ = _parent_;
-			return *this;
-		}
-		RBNode* left() const {
-			return nullptr;
-		}
-		RBNode& left(RBNode* _left_) {
-			return *this;
-		}
-		RBNode* right() const {
-			return nullptr;
-		}
-		RBNode& right(RBNode* _right_) {
-			return *this;
-		}
-		const Interval& key() const {
-			return key_;
-		}
-		RBNode& key(const Interval& _key_) {
-			return *this;
-		}
-		long max() const {
-			return -1L;
-		}
-		RBNode& max(long _max_) {
-			return *this;
-		}
-		long min() const {
-			return -1L;
-		}
-		RBNode& min(long _min_) {
-			return *this;
-		}
-		~LeafNode() {
-		}
-	};
+        Color color() const {
+            return color_;
+        }
+        void color(Color color_) {
+            assert(left_ != this && right_ != this);
+            this->color_ = color_;
+        }
+        OrdinaryNode* parent() const {
+            return parent_;
+        }
+        void parent(OrdinaryNode *parent_) {
+            this->parent_ = parent_;
+        }
+        OrdinaryNode* left() const {
+            return left_;
+        }
+        void left(OrdinaryNode *left_) {
+            assert(left_ != this && right_ != this);
+            this->left_ = left_;
+        }
+        OrdinaryNode* right() const {
+            return right_;
+        }
+        void right(OrdinaryNode *right_) {
+            assert(left_ != this && right_ != this);
+            this->right_ = right_;
+        }
+        const Interval& key() const {
+            return key_;
+        }
+        void key(const Interval& key_) {
+            assert(left_ != this && right_ != this);
+            this->key_ = key_;
+        }
+        long max() const {
+            return max_;
+        }
+        void max(long _max_) {
+            assert(left_ != this && right_ != this);
+            max_ = _max_;
+        }
+        long min() const {
+            return min_;
+        }
+        void min(long _min_) {
+            assert(left_ != this && right_ != this);
+            min_ = _min_;
+        }
+        ~OrdinaryNode() {
+            if (left_ != TNIL) {
+                delete left_;
+            }
+            if (right_ != TNIL) {
+                delete right_;
+            }
+        }
+        friend class IntervalTree;
+    };
 
-	typedef RBNode *NodePtr;
+    typedef OrdinaryNode *NodePtr;
 
-	NodePtr root_;
+private:
+    NodePtr root_;
 
-	static LeafNode nilNode;
-	static RBNode * const TNIL;
+    static OrdinaryNode nilNode;
+    static OrdinaryNode *const TNIL;
 
-	NodePtr search(NodePtr node, Interval key) {
-		if (node == TNIL || key == node->key()) {
-			return node;
-		}
+    static const Interval& search(const NodePtr node, const Interval& key);
+    static const Interval& search(const NodePtr node, long offset);
 
-		if (key < node->key()) {
-			return search(node->left(), key);
-		}
-		return search(node->right(), key);
-	}
+    /**
+     * Iterative implementation.
+     * see https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
+     */
+    static void overlapSearch(const NodePtr _root_, const Interval& i, std::set<Interval> &res);
 
-	/**
-	 * Recursion.
-	 * see https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
-	 */
-	void overlapSearch(NodePtr _root_, const Interval& i, std::set<Interval>& res);
+   /**
+     * fix the rb tree modified by the delete operation
+     */
+    void fixDelete(NodePtr x);
 
-	void prints(NodePtr _root_) {
-		using std::cout;
-		if (_root_ == TNIL) {
-			return;
-		}
-		prints(_root_->left());
-		cout << _root_->key() << " ";
-		prints(_root_->right());
-	}
+    /**
+     *  fix the red-black tree
+     *  Possible violations:
+     *    - the root is RED;
+     *    - both k and k's parent are RED.
+     *  The node pointed to by k is always red.
+     */
+    void fixInsert(NodePtr k);
 
-	/**
-	 * fix the rb tree modified by the delete operation
-	 */
-	void fixDelete(NodePtr x);
+    void rbTransplant(NodePtr u, NodePtr v) {
+        if (u->parent() == nullptr) {
+            root_ = v;
+        } else if (u == u->parent()->left()) {
+            u->parent()->left(v);
+        } else {
+            u->parent()->right(v);
+        }
+        v->parent(u->parent());
+    }
 
-	/**
-	 *  fix the red-black tree
-	 */
-	void fixInsert(NodePtr k);
+    /**
+     * remove the key from the tree, starting at root.
+     *
+     * see also https://doxygen.postgresql.org/rbtree_8c_source.html
+     */
+    bool remove(NodePtr root, const Interval& key);
 
-	void rbTransplant(NodePtr u, NodePtr v) {
-		if (u->parent() == nullptr) {
-			root_ = v;
-		} else if (u == u->parent()->left()) {
-			u->parent()->left(v);
-		} else {
-			u->parent()->right(v);
-		}
-		v->parent(u->parent());
-	}
+    /**
+     * max(x) = max(rightendpoint(x), max(left(x)), max(right(x)))
+     *
+     * see also https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
+     */
+    long max(long end, NodePtr left, NodePtr right) const {
+        using std::max;
+        if (left == TNIL && right == TNIL) {
+            return end;
+        } else if (left == TNIL) {
+            return max(end, right->max());
+        } else if (right == TNIL) {
+            return max(end, left->max());
+        } else {
+            return max(end, max(left->max(), right->max()));
+        }
+    }
 
-	/**
-	 * remove the key from the tree, starting at root.
-	 *
-	 * see also https://doxygen.postgresql.org/rbtree_8c_source.html
-	 */
-	void remove(NodePtr root, const Interval& key);
+    /**
+     * min(x) = min(leftendpoint(x), min(left(x)), min(right(x)))
+     *
+     * similar to max
+     */
+    long min(long start, NodePtr left, NodePtr right) const {
+        using std::min;
+        if (left == TNIL && right == TNIL) {
+            return start;
+        } else if (left == TNIL) {
+            return min(start, right->min());
+        } else if (right == TNIL) {
+            return min(start, left->min());
+        } else {
+            return min(start, min(left->min(), right->min()));
+        }
+    }
 
-	/**
-	 * print the tree structure on the screen
-	 */
-	void printth(NodePtr root, std::string indent, bool last) {
-		using std::cout;
-		using std::endl;
-		if (root != TNIL) {
-			cout << indent;
-			if (last) {
-				cout << "R----";
-				indent += "     ";
-			} else {
-				cout << "L----";
-				indent += "|    ";
-			}
-
-			cout << "{key:" << root->key() << ", max:" << root->max()<< ", min:" << root->min() << "}" << "(" << (root->color() == RED ? "RED" : "BLACK") << ")" << endl;
-			printth(root->left(), indent, false);
-			printth(root->right(), indent, true);
-		}
-	}
-
-	/**
-	 * max(x) = max(rightendpoint(x), max(left(x)), max(right(x)))
-	 *
-	 * see also https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
-	 */
-	long max(long end, NodePtr left, NodePtr right) {
-		using std::max;
-		if (left == TNIL && right == TNIL) {
-			return end;
-		} else if (left == TNIL) {
-			return max(end,right->max());
-		} else if (right == TNIL) {
-			return max(end,left->max());
-		} else {
-			return max(end,max(left->max(),right->max()));
-		}
-	}
-
-	/**
-	 * min(x) = min(leftendpoint(x), min(left(x)), min(right(x)))
-	 *
-	 * similar to max
-	 */
-	long min(long start, NodePtr left, NodePtr right) {
-		using std::min;
-		if (left == TNIL && right == TNIL) {
-			return start;
-		} else if (left == TNIL) {
-			return min(start, right->min());
-		} else if (right == TNIL) {
-			return min(start, left->min());
-		} else {
-			return min(start, min(left->min(),right->min()));
-		}
-	}
-
-	/**
-	 *  rotate left at node x
-	 *
-	 *  x's right child takes its place in the tree, and x becomes the left
-	 *  child of that node.
-	 *
-	 *  parent x    parent x
-	 *   |            |
-	 *   x            y
-	 *  / \          / \
+    /**
+     *  rotate left at node x
+     *
+     *  x's right child takes its place in the tree, and x becomes the left
+     *  child of that node.
+     *
+     *  parent x    parent x
+     *   |            |
+     *   x            y
+     *  / \          / \
 	 * a   \        /   c
-	 *      y      x
-	 *     / \    / \
+     *      y      x
+     *     / \    / \
 	 *    b   c  a   b
-	 */
-	void rotateLeft(NodePtr x);
+     */
+    void rotateLeft(NodePtr x);
 
-	/**
-	 *  rotate right at node x
-	 *
-	 *  x's left right child takes its place in the tree, and x becomes the right
-	 *  child of that node.
-	 *
-	 *   parent x  parent x
-	 *       |        |
-	 *       x        y
-	 *      / \      / \
+    /**
+     *  rotate right at node x
+     *
+     *  x's left right child takes its place in the tree, and x becomes the right
+     *  child of that node.
+     *
+     *   parent x  parent x
+     *       |        |
+     *       x        y
+     *      / \      / \
 	 *     /   c    a   \
 	 *    y              x
-	 *   / \            / \
+     *   / \            / \
 	 *  a   b          b   c
-	 */
-	void rotateRight(NodePtr x);
+     */
+    void rotateRight(NodePtr x);
 
-	/**
-	 *  find the node with the minimum key
-	 */
-	NodePtr minimum(NodePtr node);
+    /**
+     *  find the node with the minimum key
+     */
+    static NodePtr minimum(const NodePtr node);
 
-	/**
-	 *  find the node with the maximum key
-	 */
-	NodePtr maximum(NodePtr node);
+    /**
+     *  find the node with the maximum key
+     */
+    static NodePtr maximum(const NodePtr node);
+
+    /**
+     * find the successor of a given node.
+     *
+     * if the right subtree is not null, the successor is the leftmost node in the right subtree
+     * else it is the lowest ancestor of x whose left child is also an ancestor of x.
+     */
+    static NodePtr successor(const NodePtr x);
+
+    /**
+     * find the predecessor of a given node.
+     *
+     * if the left subtree is not null, the predecessor is the rightmost node in the left subtree.
+     */
+    static NodePtr predecessor(const NodePtr x);
 
 public:
 
-	IntervalTree() {
-		root_ = TNIL;
-	}
-	~IntervalTree() {
-		if (root_ != TNIL) {
-			delete root_;
-		}
-	}
+    IntervalTree() {
+        root_ = TNIL;
+    }
+    ~IntervalTree() {
+        if (!empty()) {
+            delete root_;
+        }
+    }
 
-	void clear() {
-		if (root_ != TNIL) {
-			delete root_;
-			root_ = TNIL;
-		}
-	}
+    bool empty() const {
+        return root_ == TNIL;
+    }
 
-	/**
-	 * search the tree for the key k and return the corresponding node
-	 */
-	NodePtr search(Interval k) {
-		return search(this->root_, k);
-	}
+    void clear() {
+        if (!empty()) {
+            delete root_;
+            root_ = TNIL;
+        }
+    }
 
-	void overlapSearch(const Interval i, std::set<Interval>& res) {
-		overlapSearch(root_, i, res);
-	}
+    /**
+     * search the tree for the key k and return the corresponding Interval
+     * Return reference to valid interval if found and reference to not valid otherwise.
+     * The client should check the interval by calling Interval::isValid ().
+     * Semantic - "is there interval with offset like k.offset?"
+     */
+    const Interval& search(const Interval& k) const {
+        return search(this->root_, k);
+    }
 
-	/**
-	 * find the successor of a given node.
-	 *
-	 * if the right subtree is not null, the successor is the leftmost node in the right subtree
-	 * else it is the lowest ancestor of x whose left child is also an ancestor of x.
-	 */
-	NodePtr successor(NodePtr x);
+    /**
+     * Search the tree for the interval with given offset.
+     * Return reference to valid interval if found and reference to not valid otherwise.
+     * The client should check the interval by calling Interval::isValid ().
+     * Semantic - is there interval with such offset?
+     */
+    const Interval& search(long offset) const {
+        return search(this->root_, offset);
+    }
 
-	/**
-	 * find the predecessor of a given node.
-	 *
-	 * if the left subtree is not null, the predecessor is the rightmost node in the, left subtree.
-	 */
-	NodePtr predecessor(NodePtr x);
+    /**
+     * Finds in the tree intervals overlapping with the given.
+     * The best case (the fastest) - there is no such intervals.
+     * The worst case (the slowest) - there are overlaps with all intervals.
+     */
+    void overlapSearch(const Interval& i, std::set<Interval>& res) const {
+        overlapSearch(root_, i, res);
+    }
 
-	/**
-	 *  insert the key to the tree in its appropriate position and fix the tree
-	 */
-	void insert(const Interval& key);
+    /**
+     *  insert the key to the tree in its appropriate position and fix the tree
+     */
+    bool insert(const Interval& key);
 
-	/**
-	 * delete the node from the tree
-	 */
-	void remove(const Interval& key) {
-		remove(this->root_, key);
-	}
+    /**
+     * delete the node from the tree
+     */
+    bool remove(const Interval& key) {
+        return remove(this->root_, key);
+    }
 
-	/**
-	 * print the tree structure on the screen
-	 */
-	void printt() {
-		using std::cout;
-		using std::endl;
-		if (root_ != TNIL) {
-			printth(this->root_, "", true);
-		}
-		cout << endl;
-	}
-
-	void prints() {
-		using std::cout;
-		using std::endl;
-		if (root_ != TNIL) {
-			prints(root_);
-		}
-		cout << endl;
-	}
-
+    friend class HierarchyWriter;
+    friend class SequenceWriter;
 };
+
+/**
+ * writes the tree structure to text file.
+ */
+class HierarchyWriter {
+private:
+    const IntervalTree& tree;
+
+    std::ostream& print(std::ostream& os,const IntervalTree::NodePtr root, std::string indent, bool last) const;
+public:
+    HierarchyWriter(const IntervalTree& t) : tree(t) {}
+
+    std::ostream& print(std::ostream& os) const {
+        return print(os, tree.root_, "", true);
+    }
+};
+
+inline std::ostream& operator << (std::ostream& os, const HierarchyWriter& prnt) {
+   return prnt.print(os);
+}
+
+/**
+ * writes a sequence of intervals to text file.
+ */
+class SequenceWriter {
+private:
+   const IntervalTree& tree;
+
+   std::ostream& print(std::ostream& os, const IntervalTree::NodePtr root) const;
+public:
+   SequenceWriter(const IntervalTree& t) : tree(t) {}
+
+   std::ostream& print(std::ostream& os) const {
+       return print(os, tree.root_);
+   }
+};
+
+inline std::ostream& operator << (std::ostream& os, const SequenceWriter& prnt) {
+   return prnt.print(os);
+}
 
 #endif /* INTERVALTREE_HPP_ */
