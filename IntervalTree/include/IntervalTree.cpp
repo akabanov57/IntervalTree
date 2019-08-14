@@ -1,11 +1,14 @@
+#ifndef INTERVAL_TREE_CPP
+#define INTERVAL_TREE_CPP
 
 #include <iostream>
 #include <stack>
 
-#include <IntervalTree.hpp>
+template<typename T, typename Interval>
+typename IntervalTree<T, Interval>::OrdinaryNode IntervalTree<T, Interval>::nilNode;
 
-IntervalTree::OrdinaryNode IntervalTree::nilNode;
-IntervalTree::OrdinaryNode *const IntervalTree::TNIL = &IntervalTree::nilNode;
+template<typename T, typename Interval>
+typename IntervalTree<T, Interval>::OrdinaryNode *const IntervalTree<T, Interval>::TNIL = &IntervalTree<T, Interval>::nilNode;
 
 /**
  *  rotate left at node x
@@ -22,7 +25,8 @@ IntervalTree::OrdinaryNode *const IntervalTree::TNIL = &IntervalTree::nilNode;
  *     / \    / \
  *    b   c  a   b
  */
-void IntervalTree::rotateLeft(NodePtr x) {
+template<typename T, typename Interval>
+void IntervalTree<T, Interval>::rotateLeft(NodePtr x) {
 
     NodePtr y = x->right();
 
@@ -82,7 +86,8 @@ void IntervalTree::rotateLeft(NodePtr x) {
  *   / \            / \
  *  a   b          b   c
  */
-void IntervalTree::rotateRight(NodePtr x) {
+template<typename T, typename Interval>
+void IntervalTree<T, Interval>::rotateRight(NodePtr x) {
 
     NodePtr y = x->left();
 
@@ -129,7 +134,8 @@ void IntervalTree::rotateRight(NodePtr x) {
 
 }
 
-void IntervalTree::fixInsert(NodePtr k) {
+template<typename T, typename Interval>
+void IntervalTree<T, Interval>::fixInsert(NodePtr k) {
     NodePtr u(nullptr);
     while (k != root_ && k->parent()->color() == RED) {
         if (k->parent() == k->parent()->parent()->right()) { // k's parent is right child
@@ -176,7 +182,8 @@ void IntervalTree::fixInsert(NodePtr k) {
     root_->color(BLACK);
 }
 
-void IntervalTree::fixDelete(NodePtr x) {
+template<typename T, typename Interval>
+void IntervalTree<T, Interval>::fixDelete(NodePtr x) {
     while (x != root_ && x->color() == BLACK) {
         if (x == x->parent()->left()) {
             NodePtr    w = x->parent()->right();
@@ -239,7 +246,8 @@ void IntervalTree::fixDelete(NodePtr x) {
 /**
  * remove the key from the tree, starting at root.
  */
-bool IntervalTree::remove(NodePtr root, const Interval &key) {
+template<typename T, typename Interval>
+bool IntervalTree<T, Interval>::remove(NodePtr root, const Interval &key) {
     /*
      * the cursor should point to the node to be deleted.
      */
@@ -341,7 +349,8 @@ bool IntervalTree::remove(NodePtr root, const Interval &key) {
 /**
  * Ordinary Binary Search Insertion
  */
-bool IntervalTree::insert(const Interval& key) {
+template<typename T, typename Interval>
+bool IntervalTree<T, Interval>::insert(const Interval& key) {
     NodePtr parent = nullptr;
     NodePtr current = this->root_;
 
@@ -384,7 +393,8 @@ bool IntervalTree::insert(const Interval& key) {
     return true;
 }
 
-IntervalTree::NodePtr IntervalTree::minimum(const IntervalTree::NodePtr node) {
+template<typename T, typename Interval>
+typename IntervalTree<T, Interval>::NodePtr IntervalTree<T, Interval>::minimum(const IntervalTree<T, Interval>::NodePtr node) {
     NodePtr found = node;
     while (found->left() != TNIL) {
         found = found->left();
@@ -392,7 +402,8 @@ IntervalTree::NodePtr IntervalTree::minimum(const IntervalTree::NodePtr node) {
     return found;
 }
 
-IntervalTree::NodePtr IntervalTree::maximum(const IntervalTree::NodePtr node) {
+template<typename T, typename Interval>
+typename IntervalTree<T, Interval>::NodePtr IntervalTree<T, Interval>::maximum(const IntervalTree<T, Interval>::NodePtr node) {
     NodePtr found = node;
     while (found->right() != TNIL) {
         found = found->right();
@@ -404,7 +415,8 @@ IntervalTree::NodePtr IntervalTree::maximum(const IntervalTree::NodePtr node) {
  * if the right subtree is not null, the successor is the leftmost node in the right subtree
  * else it is the lowest ancestor of x whose left child is also an ancestor of x.
  */
-IntervalTree::NodePtr IntervalTree::successor(const IntervalTree::NodePtr x) {
+template<typename T, typename Interval>
+typename IntervalTree<T, Interval>::NodePtr IntervalTree<T, Interval>::successor(const IntervalTree<T, Interval>::NodePtr x) {
     /**
      * if right subtree is not empty.
      */
@@ -433,7 +445,8 @@ IntervalTree::NodePtr IntervalTree::successor(const IntervalTree::NodePtr x) {
  * if the left subtree is not null, the predecessor is the rightmost node in the, left subtree
  * else it is the lowest ancestor of x whose right child is also an ancestor of x.
  */
-IntervalTree::NodePtr IntervalTree::predecessor(const IntervalTree::NodePtr x) {
+template<typename T, typename Interval>
+typename IntervalTree<T, Interval>::NodePtr IntervalTree<T, Interval>::predecessor(const IntervalTree<T, Interval>::NodePtr x) {
     /**
      * if left subtree is not empty.
      */
@@ -458,7 +471,8 @@ IntervalTree::NodePtr IntervalTree::predecessor(const IntervalTree::NodePtr x) {
     return parent;
 }
 
-void IntervalTree::overlapSearch(const NodePtr _root_, const Interval& i, std::set<Interval>& res) {
+template<typename T, typename Interval>
+void IntervalTree<T, Interval>::overlapSearch(const NodePtr _root_, const Interval& i, std::set<Interval>& res) {
     using std::stack;
 
     NodePtr curr = _root_;
@@ -516,7 +530,8 @@ void IntervalTree::overlapSearch(const NodePtr _root_, const Interval& i, std::s
 
 }
 
-const Interval& IntervalTree::search(const NodePtr node, const Interval& key) {
+template<typename T, typename Interval>
+const Interval& IntervalTree<T, Interval>::search(const NodePtr node, const Interval& key) {
     NodePtr found = node;
     while (found != TNIL && found->key() != key) {
         if (key < found->key()) {
@@ -528,7 +543,8 @@ const Interval& IntervalTree::search(const NodePtr node, const Interval& key) {
     return found->key();
 }
 
-const Interval& IntervalTree::search(const NodePtr node, long offset) {
+template<typename T, typename Interval>
+const Interval& IntervalTree<T, Interval>::search(const NodePtr node, long offset) {
     NodePtr found = node;
     while (found != TNIL && found->key().start() != offset) {
         if (offset < found->key().start()) {
@@ -540,9 +556,10 @@ const Interval& IntervalTree::search(const NodePtr node, long offset) {
     return found->key();
 }
 
-std::ostream& HierarchyWriter::print(std::ostream& os,const IntervalTree::NodePtr root, std::string indent, bool last) const {
+template<typename T, typename Interval>
+std::ostream& HierarchyWriter<T, Interval>::print(std::ostream& os,const typename IntervalTree<T, Interval>::NodePtr root, std::string indent, bool last) const {
     using std::endl;
-    if (root != IntervalTree::TNIL) {
+    if (root != IntervalTree<T, Interval>::TNIL) {
         os << indent;
         if (last) {
             os << "R----";
@@ -553,15 +570,16 @@ std::ostream& HierarchyWriter::print(std::ostream& os,const IntervalTree::NodePt
         }
 
         os << "{key:" << root->key() << ", max:" << root->max() << ", min:" << root->min() << "}" << "("
-             << (root->color() == IntervalTree::RED ? "RED" : "BLACK") << ")" << endl;
+             << (root->color() == IntervalTree<T, Interval>::RED ? "RED" : "BLACK") << ")" << endl;
         print(os, root->left(), indent, false);
         print(os, root->right(), indent, true);
     }
     return os;
 }
 
-std::ostream& SequenceWriter::print(std::ostream& os, const IntervalTree::NodePtr root) const {
-     if (root == IntervalTree::TNIL) {
+template<typename T, typename Interval>
+std::ostream& SequenceWriter<T, Interval>::print(std::ostream& os, const typename IntervalTree<T, Interval>::NodePtr root) const {
+     if (root == IntervalTree<T, Interval>::TNIL) {
          return os;
      }
      print(os, root->left());
@@ -570,3 +588,4 @@ std::ostream& SequenceWriter::print(std::ostream& os, const IntervalTree::NodePt
      return os;
  }
 
+#endif // INTERVAL_TREE_CPP

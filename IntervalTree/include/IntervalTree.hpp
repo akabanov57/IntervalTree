@@ -15,6 +15,12 @@
 
 #include <Interval.hpp>
 
+template<typename T, typename Interval>
+class HierarchyWriter;
+
+template<typename T, typename Interval>
+class SequenceWriter;
+
 /**
  * In computer science, an interval tree is a tree data structure to hold intervals.
  * Specifically, it allows one to efficiently find all intervals that overlap with
@@ -33,6 +39,7 @@
  *
  */
 
+template<typename T, typename Interval = IntervalT<T>>
 class IntervalTree {
 private:
 
@@ -53,19 +60,19 @@ private:
         /**
          * Node is augmented with maximal right endpoint in subtree rooted in x.
          */
-        long max_;
+        unsigned long max_;
         /**
          * Node is augmented with minimal left endpoint in subtree rooted in x.
          */
-        long min_;
+        unsigned long min_;
 
         OrdinaryNode() {
             color_ = BLACK;
             parent_ = nullptr;
             left_ = this;
             right_ = this;
-            max_ = 0L;
-            min_ = 0L;
+            max_ = 0UL;
+            min_ = 0UL;
         }
     public:
         /**
@@ -117,17 +124,17 @@ private:
             assert(left_ != this && right_ != this);
             this->key_ = key_;
         }
-        long max() const {
+        unsigned long max() const {
             return max_;
         }
-        void max(long _max_) {
+        void max(unsigned long _max_) {
             assert(left_ != this && right_ != this);
             max_ = _max_;
         }
-        long min() const {
+        unsigned long min() const {
             return min_;
         }
-        void min(long _min_) {
+        void min(unsigned long _min_) {
             assert(left_ != this && right_ != this);
             min_ = _min_;
         }
@@ -142,7 +149,7 @@ private:
         friend class IntervalTree;
     };
 
-    typedef OrdinaryNode *NodePtr;
+    typedef OrdinaryNode* NodePtr;
 
 private:
     NodePtr root_;
@@ -157,7 +164,7 @@ private:
      * Iterative implementation.
      * see https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
      */
-    static void overlapSearch(const NodePtr _root_, const Interval& i, std::set<Interval> &res);
+    static void overlapSearch(const NodePtr _root_, const Interval& i, std::set<Interval>& res);
 
    /**
      * fix the rb tree modified by the delete operation
@@ -196,7 +203,7 @@ private:
      *
      * see also https://www.bowdoin.edu/~ltoma/teaching/cs231/spring14/Lectures/10-augmentedTrees/augtrees.pdf
      */
-    long max(long end, NodePtr left, NodePtr right) const {
+    static unsigned long max(unsigned long end, NodePtr left, NodePtr right) {
         using std::max;
         if (left == TNIL && right == TNIL) {
             return end;
@@ -214,7 +221,7 @@ private:
      *
      * similar to max
      */
-    long min(long start, NodePtr left, NodePtr right) const {
+    static unsigned long min(unsigned long start, NodePtr left, NodePtr right) {
         using std::min;
         if (left == TNIL && right == TNIL) {
             return start;
@@ -324,7 +331,7 @@ public:
      * The client should check the interval by calling Interval::isValid ().
      * Semantic - is there interval with such offset?
      */
-    const Interval& search(long offset) const {
+    const Interval& search(unsigned long offset) const {
         return search(this->root_, offset);
     }
 
@@ -349,48 +356,54 @@ public:
         return remove(this->root_, key);
     }
 
-    friend class HierarchyWriter;
-    friend class SequenceWriter;
+    friend class HierarchyWriter<T, Interval>;
+    friend class SequenceWriter<T, Interval>;
 };
 
 /**
  * writes the tree structure to text file.
  */
+template<typename T, typename Interval = IntervalT<T>>
 class HierarchyWriter {
 private:
-    const IntervalTree& tree;
+    const IntervalTree<T, Interval>& tree;
 
-    std::ostream& print(std::ostream& os,const IntervalTree::NodePtr root, std::string indent, bool last) const;
+    std::ostream& print(std::ostream& os, const typename IntervalTree<T, Interval>::NodePtr root, std::string indent, bool last) const;
 public:
-    HierarchyWriter(const IntervalTree& t) : tree(t) {}
+    HierarchyWriter(const IntervalTree<T, Interval>& t) : tree(t) {}
 
     std::ostream& print(std::ostream& os) const {
         return print(os, tree.root_, "", true);
     }
 };
 
-inline std::ostream& operator << (std::ostream& os, const HierarchyWriter& prnt) {
+template<typename T, typename Interval = IntervalT<T>>
+inline std::ostream& operator << (std::ostream& os, const HierarchyWriter<T, Interval>& prnt) {
    return prnt.print(os);
 }
 
 /**
  * writes a sequence of intervals to text file.
  */
+template<typename T, typename Interval = IntervalT<T>>
 class SequenceWriter {
 private:
-   const IntervalTree& tree;
+   const IntervalTree<T, Interval>& tree;
 
-   std::ostream& print(std::ostream& os, const IntervalTree::NodePtr root) const;
+   std::ostream& print(std::ostream& os, const typename IntervalTree<T, Interval>::NodePtr root) const;
 public:
-   SequenceWriter(const IntervalTree& t) : tree(t) {}
+   SequenceWriter(const IntervalTree<T, Interval>& t) : tree(t) {}
 
    std::ostream& print(std::ostream& os) const {
        return print(os, tree.root_);
    }
 };
 
-inline std::ostream& operator << (std::ostream& os, const SequenceWriter& prnt) {
+template<typename T, typename Interval = IntervalT<T>>
+inline std::ostream& operator << (std::ostream& os, const SequenceWriter<T, Interval>& prnt) {
    return prnt.print(os);
 }
+
+#include "IntervalTree.cpp"
 
 #endif /* INTERVALTREE_HPP_ */
